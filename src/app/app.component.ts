@@ -36,6 +36,14 @@ export class AppComponent {
       data: "6"
     }
   ];
+
+  filterButtons = [
+    {name: "VM", filterCallback: function(key, value): boolean{ return ['One', 'Two'].indexOf(value) != -1 }},
+    {name: "Location", filterCallback: function(key, value): boolean{ return ['Three', 'Four'].indexOf(value) != -1 }},
+    {name: "All", filterCallback: function(key, value): boolean{ return true}},
+    {name: "Nqkuv longer text", filterCallback: function(key, value): boolean{ return ['Five', 'Six'].indexOf(value) != -1 }}
+
+  ]
   selectedOptions = ["1", "2", "3"];
   selected = this.selectedOptions;
   showError = false;
