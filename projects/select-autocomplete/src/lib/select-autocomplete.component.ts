@@ -7,90 +7,14 @@ import {
   ViewChild,
   DoCheck
 } from "@angular/core";
-import { FormControl } from "@angular/forms";
+import {FormControl} from "@angular/forms";
+import {MatButtonToggleGroup} from "@angular/material/button-toggle";
 
 @Component({
+
   selector: "mat-select-autocomplete",
-  template: `
-    <mat-form-field appearance="{{ appearance }}">
-      <mat-select
-        #selectElem
-        [placeholder]="placeholder"
-        [formControl]="formControl"
-        [multiple]="multiple"
-        [(ngModel)]="selectedValue"
-        (selectionChange)="onSelectionChange($event)"
-      >
-        <div class="box-search">
-          <mat-checkbox
-            *ngIf="multiple"
-            color="primary"
-            class="box-select-all"
-            [(ngModel)]="selectAllChecked"
-            (change)="toggleSelectAll($event)"
-          ></mat-checkbox>
-          <input
-            #searchInput
-            type="text"
-            [ngClass]="{ 'pl-1': !multiple }"
-            (input)="filterItem(searchInput.value)"
-            [placeholder]="selectPlaceholder"
-          />
-          <div
-            class="box-search-icon"
-            (click)="filterItem(''); searchInput.value = ''"
-          >
-            <button mat-icon-button class="search-button">
-              <mat-icon class="mat-24" aria-label="Search icon">clear</mat-icon>
-            </button>
-          </div>
-        </div>
-        <mat-select-trigger>
-          {{ onDisplayString() }}
-        </mat-select-trigger>
-        <mat-option
-          *ngFor="let option of options; trackBy: trackByFn"
-          [disabled]="option.disabled"
-          [value]="option[value]"
-          [style.display]="hideOption(option) ? 'none' : 'flex'"
-          >{{ option[display] }}
-        </mat-option>
-      </mat-select>
-      <mat-hint style="color:red" *ngIf="showErrorMsg">{{ errorMsg }}</mat-hint>
-    </mat-form-field>
-  `,
-  styles: [
-    `
-      .box-search {
-        margin: 8px;
-        border-radius: 2px;
-        box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.16),
-          0 0 0 1px rgba(0, 0, 0, 0.08);
-        transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-      }
-      .box-search input {
-        flex: 1;
-        border: none;
-        outline: none;
-      }
-      .box-select-all {
-        width: 36px;
-        line-height: 33px;
-        color: #808080;
-        text-align: center;
-      }
-      .search-button {
-        width: 36px;
-        height: 36px;
-        line-height: 33px;
-        color: #808080;
-      }
-      .pl-1 {
-        padding-left: 1rem;
-      }
-    `
-  ]
+  templateUrl: './select-autocomplete.component.html',
+  styleUrls: ['./select-autocomplete.component.scss']
 })
 export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   @Input() selectPlaceholder: string = "search...";
@@ -104,6 +28,7 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   @Input() showErrorMsg = false;
   @Input() selectedOptions;
   @Input() multiple = true;
+  @Input() filterButtons: Array<{ name: String, filterCallback: (key, value) => boolean }> = []
 
   // New Options
   @Input() labelCount: number = 1;
@@ -113,12 +38,14 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   selectionChange: EventEmitter<any> = new EventEmitter();
 
   @ViewChild("selectElem") selectElem;
-
+  @ViewChild(MatButtonToggleGroup) toggleGroup: MatButtonToggleGroup;
   filteredOptions: Array<any> = [];
   selectedValue: Array<any> = [];
   selectAllChecked = false;
   displayString = "";
-  constructor() {}
+
+  constructor() {
+  }
 
   ngOnChanges() {
     if (this.disabled) {
@@ -145,6 +72,9 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   }
 
   toggleSelectAll(val) {
+    if(this.toggleGroup){
+      this.toggleGroup.value = null;
+    }
     if (val.checked) {
       this.filteredOptions.forEach(option => {
         if (!this.selectedValue.includes(option[this.value])) {
@@ -183,7 +113,7 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   getFilteredOptionsValues() {
     const filteredValues = [];
     this.filteredOptions.forEach(option => {
-      filteredValues.push(option.value);
+      filteredValues.push(option[this.value]);
     });
     return filteredValues;
   }
@@ -211,7 +141,7 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
             this.selectedValue.length > this.labelCount
           ) {
             this.displayString += ` (+${this.selectedValue.length -
-              this.labelCount} others)`;
+            this.labelCount} others)`;
           }
         }
       } else {
@@ -228,6 +158,9 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
   }
 
   onSelectionChange(val) {
+    if(this.toggleGroup){
+      this.toggleGroup.value = null;
+    }
     const filteredValues = this.getFilteredOptionsValues();
     let count = 0;
     if (this.multiple) {
@@ -238,11 +171,23 @@ export class SelectAutocompleteComponent implements OnChanges, DoCheck {
       });
       this.selectAllChecked = count === this.filteredOptions.length;
     }
+
     this.selectedValue = val.value;
     this.selectionChange.emit(this.selectedValue);
   }
 
   public trackByFn(index, item) {
     return item.value;
+  }
+
+  public changeSelectedValues($buttonClicked, filterCallback: (key, value) => boolean) {
+    this.selectedOptions = []
+    if ($buttonClicked.source.checked) {
+      this.toggleGroup.value = [$buttonClicked.source.value]
+      this.selectedOptions = this.filteredOptions.filter(option => filterCallback(option[this.value], option[this.display]))
+    }
+
+    this.selectedValue = this.selectedOptions.map(item => item[this.value])
+    this.selectionChange.emit(this.selectedValue)
   }
 }
